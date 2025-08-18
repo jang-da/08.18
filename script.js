@@ -2,16 +2,16 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 let realTarget = {
-    x: Math.random() * (canvas.width - 50),
-    y: Math.random() * (canvas.height - 50),
+    x: 0,
+    y: 0,
     width: 50,
     height: 50,
     color: 'blue'
 };
 
 let fakeTarget = {
-    x: Math.random() * (canvas.width - 50),
-    y: Math.random() * (canvas.height - 50),
+    x: 0,
+    y: 0,
     width: 50,
     height: 50,
     color: 'red'
@@ -19,25 +19,62 @@ let fakeTarget = {
 
 let score = 0;
 
-function moveTargetsToRandomPositions() {
-    realTarget.x = Math.random() * (canvas.width - 50);
-    realTarget.y = Math.random() * (canvas.height - 50);
+function moveTargets() {
+    // Set a new random position for the real target
+    realTarget.x = Math.random() * (canvas.width - realTarget.width);
+    realTarget.y = Math.random() * (canvas.height - realTarget.height);
 
-    // Ensure targets don't overlap after moving
-    do {
-        fakeTarget.x = Math.random() * (canvas.width - 50);
-        fakeTarget.y = Math.random() * (canvas.height - 50);
-    } while (
-        Math.abs(realTarget.x - fakeTarget.x) < realTarget.width &&
-        Math.abs(realTarget.y - fakeTarget.y) < realTarget.height
-    );
+    // Position the fake target adjacent to the real target
+    const offsets = [
+        { x: realTarget.width, y: 0 },   // Right
+        { x: -realTarget.width, y: 0 },  // Left
+        { x: 0, y: realTarget.height },  // Bottom
+        { x: 0, y: -realTarget.height }  // Top
+    ];
+
+    // Shuffle offsets to randomize fake target's position
+    for (let i = offsets.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [offsets[i], offsets[j]] = [offsets[j], offsets[i]];
+    }
+
+    let positionFound = false;
+    for (const offset of offsets) {
+        const potentialX = realTarget.x + offset.x;
+        const potentialY = realTarget.y + offset.y;
+
+        // Check if the potential position is within canvas bounds
+        if (
+            potentialX >= 0 &&
+            potentialX <= canvas.width - fakeTarget.width &&
+            potentialY >= 0 &&
+            potentialY <= canvas.height - fakeTarget.height
+        ) {
+            fakeTarget.x = potentialX;
+            fakeTarget.y = potentialY;
+            positionFound = true;
+            break;
+        }
+    }
+
+    // Fallback if no position is found
+    if (!positionFound) {
+        if (realTarget.x > canvas.width / 2) {
+            fakeTarget.x = realTarget.x - realTarget.width;
+        } else {
+            fakeTarget.x = realTarget.x + realTarget.width;
+        }
+        if (realTarget.y > canvas.height / 2) {
+            fakeTarget.y = realTarget.y - realTarget.height;
+        } else {
+            fakeTarget.y = realTarget.y + realTarget.height;
+        }
+    }
 }
 
-// Move the real target every second
-setInterval(function() {
-    realTarget.x = Math.random() * (canvas.width - 50);
-    realTarget.y = Math.random() * (canvas.height - 50);
-}, 1000);
+
+// Move the targets every 0.3 seconds
+setInterval(moveTargets, 300);
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -69,10 +106,10 @@ canvas.addEventListener('click', function(event) {
 
     if (realClicked) {
         score++;
-        moveTargetsToRandomPositions();
+        moveTargets();
     } else if (fakeClicked) {
         // Don't increase score, just move the targets
-        moveTargetsToRandomPositions();
+        moveTargets();
     }
 });
 
@@ -82,5 +119,5 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-moveTargetsToRandomPositions(); // Initial placement
+moveTargets(); // Initial placement
 gameLoop();
